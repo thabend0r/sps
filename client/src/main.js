@@ -12,6 +12,9 @@ import { etaText, messageFor, locationLabels, waitingPlace } from './messages.js
 import { buildRoute, stateAt } from './route.js';
 import { hashString, seededRandom } from './random.js';
 import { loadTrackerConfig, TrackerNotFound } from './tracker-config.js';
+import { celebrate, sprinklePepernoten } from './effects.js';
+import { isSoundOn, setSound, hoofbeats, arrivalSounds } from './sound.js';
+import { isEvening, addStars } from './evening.js';
 
 // ---- map ------------------------------------------------------------------
 const map = L.map('map', {
@@ -81,6 +84,28 @@ const FollowControl = L.Control.extend({
 });
 const followControl = new FollowControl().addTo(map);
 
+// ---- sound on/off button ------------------------------------------------------
+const SoundControl = L.Control.extend({
+  options: { position: 'topleft' },
+  onAdd() {
+    const btn = L.DomUtil.create('button', 'sound-btn');
+    btn.type = 'button';
+    const render = () => {
+      btn.textContent = isSoundOn() ? '🔊 Geluid aan' : '🔇 Geluid uit';
+      btn.setAttribute('aria-pressed', String(isSoundOn()));
+    };
+    render();
+    L.DomEvent.disableClickPropagation(btn);
+    btn.addEventListener('click', () => {
+      setSound(!isSoundOn());
+      render();
+      if (isSoundOn()) hoofbeats(1.2, 0.4); // a little preview
+    });
+    return btn;
+  },
+});
+new SoundControl().addTo(map);
+
 function setFollowing(on) {
   following = on;
   followControl.getContainer().hidden = on;
@@ -118,6 +143,9 @@ const labelEl = document.getElementById('location-label');
 let lastState = null;
 let lastEvent = null;
 let lastEta = null;
+let lastEvening = null;
+
+addStars(document.querySelector('.banner'));
 
 function onEventChange(state) {
   // Message is fixed per stop (same on every device, stable on refresh).
@@ -133,7 +161,26 @@ function onEventChange(state) {
   }
   document.body.classList.toggle('arrived', state.phase === 'arrived');
   frameView(state, lastEvent !== null);
+
+  // Arrival party (also when the page is opened after arrival, but without sound then).
+  if (state.phase === 'arrived') {
+    celebrate();
+    if (lastEvent !== null) arrivalSounds();
+  } else if (state.minutesLeft <= 15 && state.phase !== 'waiting') {
+    hoofbeats(2.5, nearbyVolume(state.minutesLeft));
+  }
 }
+
+// Hoofbeats get louder as Sint gets closer (0.25 at 15 min -> 0.9 at 0 min).
+const nearbyVolume = (minutesLeft) => 0.25 + 0.65 * (1 - Math.min(15, minutesLeft) / 15);
+
+// While Sint is close: a few pepernoten now and then, and hoofbeats while he's moving.
+setInterval(() => {
+  if (!lastState || lastState.phase === 'waiting' || lastState.phase === 'arrived') return;
+  if (lastState.minutesLeft > 15) return;
+  sprinklePepernoten(3);
+  if (lastState.phase === 'traveling') hoofbeats(2, nearbyVolume(lastState.minutesLeft));
+}, 7000);
 
 function tick() {
   const state = stateAt(route, cfg.now());
@@ -151,6 +198,12 @@ function tick() {
     lastEta = eta;
   }
   document.body.classList.toggle('nearby', state.minutesLeft > 0 && state.minutesLeft <= 15);
+
+  const evening = isEvening(cfg.now());
+  if (evening !== lastEvening) {
+    document.body.classList.toggle('evening', evening);
+    lastEvening = evening;
+  }
 
   if (state.phase !== 'waiting') {
     sint.setLatLng([state.lat, state.lng]);
