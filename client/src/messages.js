@@ -3,8 +3,10 @@
 //
 //  - Groups are checked top to bottom; the first group whose `minMinutes`
 //    is <= the minutes left is used.
-//  - Within a group a random text is picked (and kept until Sint moves on).
-//  - {stad} is replaced with the city Sinterklaas is in right now.
+//  - Within a group one text is picked. The pick is fixed per stop, so all
+//    devices show the same text and it doesn't change on refresh.
+//  - {stad} is replaced with the city (visiting: where Sint is now,
+//    traveling: where Sint is going). Near the end {stad} is "jouw buurt".
 // ---------------------------------------------------------------------------
 
 /** Rough ETA shown in the big text. Not per second: in blocks. */
@@ -21,15 +23,23 @@ export const etaBlocks = [
   { minMinutes: 0,   text: 'NU!' },
 ];
 
-/** Status messages, grouped by how many minutes are left. */
-export const messages = [
+/** Before Sint sets off (more than 3 hours before delivery). */
+export const waitingMessages = [
+  'Sinterklaas is nog in het Pakjeshuis…',
+  'De Pieten pakken nog de laatste cadeautjes in 🎁',
+  'Ozosnel wordt nog geborsteld 🐴',
+  'Sinterklaas zoekt zijn mijter…',
+];
+
+/** While Sint is in a city. */
+export const visitMessages = [
   {
     minMinutes: 120,
     texts: [
-      'Sinterklaas is vertrokken uit {stad}!',
-      'Ozosnel heeft er zin in vandaag 🐴',
+      'Sinterklaas is in {stad}!',
       'De Pieten laden de zakken in {stad}.',
-      'Sinterklaas leest het Grote Boek in {stad}… staat jij erin?',
+      'Sinterklaas leest het Grote Boek in {stad}… sta jij erin?',
+      'Ozosnel heeft er zin in vandaag 🐴',
     ],
   },
   {
@@ -48,11 +58,10 @@ export const messages = [
     texts: [
       'Oh… spannend… hij komt dichterbij!',
       'De Pieten hebben jouw adres gevonden!',
-      'Ozosnel draaft extra snel, hij weet waar hij heen moet!',
     ],
   },
   {
-    minMinutes: 1,
+    minMinutes: 0,
     texts: [
       'Oh… spannend… hij is in de buurt!!',
       'Bijna hier! Hoor je al hoefgetrappel?',
@@ -60,13 +69,44 @@ export const messages = [
       'Ssst… luister eens goed…',
     ],
   },
+];
+
+/** While Sint is on the way to the next stop. */
+export const travelMessages = [
+  {
+    minMinutes: 30,
+    texts: [
+      'Ozosnel galoppeert naar {stad}! 🐴',
+      'Over de daken op weg naar {stad}…',
+      'Piet leest de kaart… volgens mij moeten we naar {stad}!',
+      'Hop hop hop, paardje in galop… naar {stad}!',
+    ],
+  },
   {
     minMinutes: 0,
     texts: [
-      'Sinterklaas is geweest! Kijk eens bij de deur… 🎁',
+      'Ozosnel draaft extra snel, hij weet waar hij heen moet!',
+      'Hij komt eraan… op weg naar {stad}!',
+      'Piet heeft jouw straat op de kaart gevonden!',
     ],
   },
 ];
+
+/** At or after delivery time. */
+export const arrivedMessages = [
+  'Sinterklaas is geweest! Kijk eens bij de deur… 🎁',
+];
+
+/** Label above/before the city name. */
+export const locationLabels = {
+  waiting: 'Nu in:',
+  visiting: 'Nu in:',
+  traveling: 'Onderweg naar:',
+  arrived: 'Nu bij:',
+};
+export const waitingPlace = 'het Pakjeshuis';
+
+// ---------------------------------------------------------------------------
 
 function findGroup(list, minutesLeft) {
   return list.find((g) => minutesLeft >= g.minMinutes) ?? list[list.length - 1];
@@ -76,8 +116,15 @@ export function etaText(minutesLeft) {
   return findGroup(etaBlocks, minutesLeft).text;
 }
 
-export function pickMessage(minutesLeft, city) {
-  const { texts } = findGroup(messages, minutesLeft);
-  const text = texts[Math.floor(Math.random() * texts.length)];
-  return text.replaceAll('{stad}', city);
+/** rnd: a number in [0,1) that is fixed for this stop. */
+export function messageFor(state, rnd) {
+  const choose = (texts) => texts[Math.floor(rnd * texts.length)];
+  let text;
+  switch (state.phase) {
+    case 'waiting':   text = choose(waitingMessages); break;
+    case 'arrived':   text = choose(arrivedMessages); break;
+    case 'visiting':  text = choose(findGroup(visitMessages, state.minutesLeft).texts); break;
+    case 'traveling': text = choose(findGroup(travelMessages, state.minutesLeft).texts); break;
+  }
+  return text.replaceAll('{stad}', state.city?.name ?? '');
 }

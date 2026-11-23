@@ -172,3 +172,18 @@ body.arrived .status-card { background: var(--gold); border-color: var(--red); }
 body.arrived .eta-label { visibility: hidden; }
 
 .leaflet-control-attribution { font-size: 10px; }
+
+/* "Volg Sint" button (shown when the child moved the map) */
+.follow-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 3px solid var(--gold);
+  background: var(--red);
+  color: var(--cream);
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+.follow-btn:hover { background: var(--red-dark); }

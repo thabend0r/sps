@@ -6,8 +6,13 @@ import '@fontsource/berkshire-swash/400.css';
 import './style.css';
 
 import { sintIcon, homeIcon } from './icons.js';
-import { etaText, pickMessage } from './messages.js';
-import { demoHome, demoRoute, demoHopSeconds } from './demo.js';
+import { etaText, messageFor, locationLabels, waitingPlace } from './messages.js';
+import { buildRoute, stateAt } from './route.js';
+import { hashString, seededRandom } from './random.js';
+import { loadTrackerConfig } from './tracker-config.js';
+
+const cfg = loadTrackerConfig();
+const route = buildRoute(cfg);
 
 // ---- map ------------------------------------------------------------------
 const NL_BOUNDS = L.latLngBounds([50.75, 3.3], [53.55, 7.25]);
@@ -40,61 +45,107 @@ L.tileLayer(`https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/${TILE_STYLE
   maxZoom: 19,
 }).addTo(map);
 
-L.marker([demoHome.lat, demoHome.lng], { icon: homeIcon, zIndexOffset: 500 }).addTo(map);
+const home = L.latLng(cfg.home.lat, cfg.home.lng);
+L.marker(home, { icon: homeIcon, zIndexOffset: 500 }).addTo(map);
 
-const start = demoRoute[0];
-const sint = L.marker([start.lat, start.lng], { icon: sintIcon, zIndexOffset: 1000 }).addTo(map);
-const trail = L.polyline([[start.lat, start.lng]], { className: 'sint-trail' }).addTo(map);
+const sint = L.marker(home, { icon: sintIcon, zIndexOffset: 1000 });
+const trail = L.polyline([], { className: 'sint-trail' }).addTo(map);
+
+// ---- follow mode: keep Sint and the house in view ---------------------------
+// Turns off as soon as the child drags/zooms; the button turns it back on.
+let following = true;
+
+const FollowControl = L.Control.extend({
+  options: { position: 'topright' },
+  onAdd() {
+    const btn = L.DomUtil.create('button', 'follow-btn');
+    btn.type = 'button';
+    btn.textContent = 'Volg Sint';
+    btn.hidden = true;
+    L.DomEvent.disableClickPropagation(btn);
+    btn.addEventListener('click', () => setFollowing(true));
+    return btn;
+  },
+});
+const followControl = new FollowControl().addTo(map);
+
+function setFollowing(on) {
+  following = on;
+  followControl.getContainer().hidden = on;
+  if (on) frameView(lastState, true);
+}
+
+for (const evt of ['mousedown', 'wheel', 'touchstart', 'keydown']) {
+  map.getContainer().addEventListener(evt, (e) => {
+    if (e.target.closest?.('.leaflet-control')) return;
+    if (following) setFollowing(false);
+  }, { passive: true });
+}
+
+function frameView(state, animate) {
+  if (!following || !state) return;
+  // Leave room at the bottom for the status card.
+  const opts = { paddingTopLeft: [50, 50], paddingBottomRight: [50, 230], maxZoom: 14, animate, duration: 1.5 };
+  if (state.phase === 'waiting') {
+    map.flyToBounds(NL_BOUNDS, opts);
+  } else if (state.phase === 'arrived') {
+    map.flyTo(home, 16, { animate, duration: 1.5 });
+  } else {
+    // Frame Sint's current target and the house.
+    const target = state.city;
+    map.flyToBounds(L.latLngBounds([home, [target.lat, target.lng], [state.lat, state.lng]]), opts);
+  }
+}
 
 // ---- UI -------------------------------------------------------------------
 const etaEl = document.getElementById('eta-value');
 const msgEl = document.getElementById('status-message');
 const cityEl = document.getElementById('current-city');
+const labelEl = document.getElementById('location-label');
 
-function updateStatus(stop) {
-  etaEl.textContent = etaText(stop.minutesLeft);
-  msgEl.textContent = pickMessage(stop.minutesLeft, stop.city);
-  cityEl.textContent = stop.city;
-  document.body.classList.toggle('nearby', stop.minutesLeft > 0 && stop.minutesLeft <= 15);
-  document.body.classList.toggle('arrived', stop.minutesLeft === 0);
-}
+let lastState = null;
+let lastEvent = null;
+let lastEta = null;
 
-// Smoothly slide the marker from a to b.
-function animateTo(from, to, durationMs) {
-  return new Promise((resolve) => {
-    const t0 = performance.now();
-    const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
-    function frame(now) {
-      const t = Math.min(1, (now - t0) / durationMs);
-      const k = ease(t);
-      const pos = L.latLng(from.lat + (to.lat - from.lat) * k, from.lng + (to.lng - from.lng) * k);
-      sint.setLatLng(pos);
-      if (t < 1) requestAnimationFrame(frame);
-      else resolve();
-    }
-    requestAnimationFrame(frame);
-  });
-}
+function onEventChange(state) {
+  // Message is fixed per stop (same on every device, stable on refresh).
+  const rnd = seededRandom(hashString(`msg:${cfg.seed}:${state.eventIndex}`))();
+  msgEl.textContent = messageFor(state, rnd);
+  labelEl.textContent = locationLabels[state.phase];
+  cityEl.textContent = state.phase === 'waiting' ? waitingPlace : state.city.name;
 
-// ---- demo loop (phase 1) ----------------------------------------------------
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function runDemo() {
-  for (;;) {
-    sint.setLatLng([start.lat, start.lng]);
-    trail.setLatLngs([[start.lat, start.lng]]);
-    updateStatus(start);
-    await sleep(demoHopSeconds * 1000);
-
-    for (let i = 1; i < demoRoute.length; i++) {
-      const stop = demoRoute[i];
-      await animateTo(demoRoute[i - 1], stop, 1500);
-      trail.addLatLng([stop.lat, stop.lng]);
-      updateStatus(stop);
-      await sleep(demoHopSeconds * 1000);
-    }
-    await sleep(4000);
+  if (state.phase === 'waiting') {
+    sint.remove();
+  } else if (!map.hasLayer(sint)) {
+    sint.addTo(map);
   }
+  document.body.classList.toggle('arrived', state.phase === 'arrived');
+  frameView(state, lastEvent !== null);
 }
 
-runDemo();
+function tick() {
+  const state = stateAt(route, cfg.now());
+
+  if (state.eventIndex !== lastEvent) {
+    lastState = state;
+    onEventChange(state);
+    lastEvent = state.eventIndex;
+  }
+  lastState = state;
+
+  const eta = etaText(state.minutesLeft);
+  if (eta !== lastEta) {
+    etaEl.textContent = eta;
+    lastEta = eta;
+  }
+  document.body.classList.toggle('nearby', state.minutesLeft > 0 && state.minutesLeft <= 15);
+
+  if (state.phase !== 'waiting') {
+    sint.setLatLng([state.lat, state.lng]);
+    const visited = state.stops.slice(0, state.stopIndex + 1).map((s) => [s.lat, s.lng]);
+    trail.setLatLngs([...visited, [state.lat, state.lng]]);
+  }
+  requestAnimationFrame(tick);
+}
+
+requestAnimationFrame(tick);

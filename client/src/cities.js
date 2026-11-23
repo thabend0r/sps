@@ -1,0 +1,21 @@
+// Cities Sinterklaas can visit. Add or remove freely ([name, lat, lng]).
+export const cities = [
+  ['Groningen', 53.2194, 6.5665], ['Leeuwarden', 53.2012, 5.7999], ['Assen', 52.9925, 6.5649],
+  ['Emmen', 52.7792, 6.9061], ['Drachten', 53.1050, 6.0989], ['Sneek', 53.0326, 5.6589],
+  ['Meppel', 52.6957, 6.1940], ['Zwolle', 52.5168, 6.0830], ['Kampen', 52.5551, 5.9114],
+  ['Deventer', 52.2550, 6.1639], ['Zutphen', 52.1383, 6.2014], ['Enschede', 52.2215, 6.8937],
+  ['Hengelo', 52.2658, 6.7931], ['Apeldoorn', 52.2112, 5.9699], ['Harderwijk', 52.3420, 5.6206],
+  ['Doetinchem', 51.9654, 6.2886], ['Arnhem', 51.9851, 5.8987], ['Nijmegen', 51.8126, 5.8372],
+  ['Ede', 52.0402, 5.6649], ['Amersfoort', 52.1561, 5.3878], ['Utrecht', 52.0907, 5.1214],
+  ['Hilversum', 52.2292, 5.1669], ['Almere', 52.3508, 5.2647], ['Lelystad', 52.5185, 5.4714],
+  ['Amsterdam', 52.3676, 4.9041], ['Volendam', 52.4950, 5.0700], ['Zaandam', 52.4420, 4.8292],
+  ['Haarlem', 52.3874, 4.6462], ['Alkmaar', 52.6324, 4.7534], ['Hoorn', 52.6425, 5.0597],
+  ['Den Helder', 52.9563, 4.7608], ['Leiden', 52.1601, 4.4970], ['Den Haag', 52.0705, 4.3007],
+  ['Delft', 52.0116, 4.3571], ['Gouda', 52.0115, 4.7105], ['Rotterdam', 51.9244, 4.4777],
+  ['Dordrecht', 51.8133, 4.6901], ['Gorinchem', 51.8306, 4.9744], ['Breda', 51.5719, 4.7683],
+  ['Tilburg', 51.5555, 5.0913], ["'s-Hertogenbosch", 51.6978, 5.3037], ['Oss', 51.7650, 5.5180],
+  ['Eindhoven', 51.4416, 5.4697], ['Helmond', 51.4793, 5.6570], ['Venlo', 51.3704, 6.1724],
+  ['Roermond', 51.1942, 5.9870], ['Maastricht', 50.8514, 5.6910], ['Heerlen', 50.8882, 5.9795],
+  ['Roosendaal', 51.5308, 4.4653], ['Bergen op Zoom', 51.4949, 4.2911], ['Goes', 51.5044, 3.8883],
+  ['Middelburg', 51.4988, 3.6136], ['Vlissingen', 51.4426, 3.5736],
+].map(([name, lat, lng]) => ({ name, lat, lng }));
