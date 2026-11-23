@@ -1,0 +1,11 @@
+services:
+  sps:
+    build: .
+    ports:
+      - "8080:3000"
+    volumes:
+      - sps-data:/data
+    restart: unless-stopped
+
+volumes:
+  sps-data:

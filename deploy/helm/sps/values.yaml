@@ -1,0 +1,68 @@
+image:
+  repository: ghcr.io/thabend0r/sps
+  # Defaults to the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# Needed if the GHCR package is private, e.g.:
+#   kubectl create secret docker-registry ghcr-pull --docker-server=ghcr.io \
+#     --docker-username=<github user> --docker-password=<PAT with read:packages>
+imagePullSecrets: []
+#  - name: ghcr-pull
+
+# SQLite = a single writer, so always exactly one pod.
+# (Deployment uses strategy "Recreate" so old and new pod never run together.)
+
+env:
+  # Number of reverse proxies in front of the app (Traefik = 1), so rate
+  # limiting sees the real client IP.
+  TRUST_PROXY: "1"
+  RATE_LIMIT_CREATE_PER_HOUR: "10"
+  RATE_LIMIT_API_PER_15MIN: "300"
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  size: 256Mi
+  # Use an existing PVC instead of creating one.
+  existingClaim: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: traefik
+  host: sint.example.nl
+  annotations: {}
+    # Once cert-manager is installed:
+    # cert-manager.io/cluster-issuer: letsencrypt
+  tls:
+    enabled: false
+    secretName: sps-tls
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

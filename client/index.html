@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>SPS · Voor ouders</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body class="parents">
+    <header class="banner">
+      <h1>Waar is Sinterklaas?</h1>
+      <p class="subtitle">Sinterklaas Positioning System · voor ouders</p>
+    </header>
+
+    <main class="sheet">
+      <p class="intro" id="intro">
+        Maak een Sint-tracker voor jullie kinderen. Ze zien op de kaart hoe Sinterklaas
+        door Nederland reist, en precies op het afgesproken tijdstip is hij bij jullie huis.
+      </p>
+
+      <form id="tracker-form" novalidate>
+        <section class="step">
+          <h2><span class="num">1</span> Waar wonen jullie?</h2>
+          <div class="address-wrap">
+            <input id="address" type="text" autocomplete="off" spellcheck="false"
+                   placeholder="Straat + huisnummer, of postcode + huisnummer"
+                   role="combobox" aria-expanded="false" aria-controls="suggestions" aria-autocomplete="list" />
+            <ul id="suggestions" role="listbox" hidden></ul>
+          </div>
+          <div id="pick-map" class="pick-map"></div>
+          <p class="hint" id="pin-hint">Kies een adres. Staat het huisje niet precies goed? Sleep het naar de juiste plek.</p>
+        </section>
+
+        <section class="step">
+          <h2><span class="num">2</span> Wanneer komt Sinterklaas?</h2>
+          <div class="when">
+            <label>Datum <input id="date" type="date" required /></label>
+            <label>Tijd <input id="time" type="time" step="300" required /></label>
+          </div>
+          <p class="hint">Sinterklaas verschijnt 3 uur van tevoren op de kaart en is op dit tijdstip precies bij jullie.</p>
+        </section>
+
+        <p class="error" id="form-error" role="alert" hidden></p>
+
+        <div class="actions">
+          <button type="submit" class="btn primary" id="submit-btn">Maak de Sint-link 🎁</button>
+          <button type="button" class="btn danger" id="delete-btn" hidden>Verwijderen</button>
+        </div>
+      </form>
+
+      <section class="result" id="result" hidden>
+        <h2>🎉 De Sint-link is klaar!</h2>
+
+        <label class="link-label" for="kids-link">Link voor de kinderen</label>
+        <div class="link-row">
+          <input id="kids-link" type="text" readonly />
+          <button type="button" class="btn small" data-copy="kids-link">Kopieer</button>
+          <a class="btn small" id="kids-open" target="_blank" rel="noopener">Open</a>
+        </div>
+        <p class="hint">
+          <a id="preview-link" target="_blank" rel="noopener">Bekijk een versneld voorbeeld</a>
+          (de hele avond in 3 minuten)
+        </p>
+
+        <label class="link-label" for="edit-link">Jouw geheime bewerk-link</label>
+        <div class="link-row">
+          <input id="edit-link" type="text" readonly />
+          <button type="button" class="btn small" data-copy="edit-link">Kopieer</button>
+        </div>
+        <p class="hint warn">
+          Bewaar deze link goed (bijvoorbeeld als bladwijzer). Alleen hiermee kun je de tijd
+          aanpassen of de tracker verwijderen. Deel hem niet met de kinderen 😉
+        </p>
+      </section>
+
+      <footer class="privacy">
+        🔒 We bewaren geen adres, alleen het puntje op de kaart en het tijdstip.
+        Alles wordt twee dagen na het tijdstip automatisch verwijderd.
+        Het adres zoeken gaat via de kaartdienst van het Kadaster (PDOK).
+      </footer>
+    </main>
+
+    <script type="module" src="/src/ouders.js"></script>
+  </body>
+</html>

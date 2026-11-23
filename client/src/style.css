@@ -1,0 +1,132 @@
+html, body { height: 100%; }
+
+body {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100dvh;
+}
+
+/* ---- map ---- */
+#map {
+  width: 100%;
+  height: 100%;
+  background: #f3e9d6;
+}
+#map { position: relative; }
+
+
+/* Soft "old map" fade towards the edges of the screen */
+#map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 450; /* above tiles, below controls */
+  pointer-events: none;
+  background: radial-gradient(ellipse at center,
+    transparent 55%,
+    rgba(243, 233, 214, 0.55) 80%,
+    rgba(200, 160, 110, 0.65) 100%);
+  box-shadow: inset 0 0 40px rgba(122, 0, 25, 0.35);
+}
+
+.sint-trail {
+  stroke: var(--red);
+  stroke-width: 4;
+  stroke-dasharray: 2 10;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.sint-marker .sint-bubble {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--cream);
+  border: 3px solid var(--gold);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: center;
+  animation: bob 1.2s ease-in-out infinite;
+}
+.sint-marker svg { width: 34px; height: 42px; }
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50% { transform: translateY(-6px) rotate(4deg); }
+}
+
+.home-marker { text-align: center; }
+.home-marker .home-pin svg {
+  width: 64px;
+  height: 64px;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+}
+.home-marker .home-label {
+  display: inline-block;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: var(--red-dark);
+  transform: translateX(-50%);
+  margin-left: 50%;
+}
+
+/* ---- status card ---- */
+.status-card {
+  position: fixed;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(92vw, 460px);
+  padding: 0.9rem 1.2rem;
+  background: var(--cream);
+  border: 4px solid var(--gold);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  text-align: center;
+  z-index: 1000;
+  transition: transform 0.3s ease;
+}
+.eta-label { display: block; font-size: 0.95rem; }
+.eta-value {
+  display: block;
+  font-family: var(--font-title);
+  font-size: clamp(1.8rem, 7vw, 2.6rem);
+  color: var(--red);
+  line-height: 1.2;
+}
+.status-message { margin: 0.4rem 0 0.2rem; font-size: 1.1rem; font-weight: 600; }
+.location { margin: 0; font-size: 0.9rem; opacity: 0.8; }
+
+/* "nearby" mode: card gets excited */
+body.nearby .status-card { animation: wiggle 0.6s ease-in-out infinite; }
+body.nearby .eta-value { color: var(--red-dark); }
+@keyframes wiggle {
+  0%, 100% { transform: translateX(-50%) rotate(0); }
+  25% { transform: translateX(-50%) rotate(-1.5deg); }
+  75% { transform: translateX(-50%) rotate(1.5deg); }
+}
+
+/* "arrived" mode */
+body.arrived .status-card { background: var(--gold); border-color: var(--red); }
+body.arrived .eta-label { visibility: hidden; }
+
+.leaflet-control-attribution { font-size: 10px; }
+
+/* "Volg Sint" button (shown when the child moved the map) */
+.follow-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 3px solid var(--gold);
+  background: var(--red);
+  color: var(--cream);
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+.follow-btn:hover { background: var(--red-dark); }
