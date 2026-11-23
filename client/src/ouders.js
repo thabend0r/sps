@@ -1,4 +1,5 @@
 import L from 'leaflet';
+import QRCode from 'qrcode';
 import 'leaflet/dist/leaflet.css';
 import '@fontsource/fredoka/400.css';
 import '@fontsource/fredoka/600.css';
@@ -80,11 +81,23 @@ function showResult(t) {
   $('kids-link').value = kids;
   $('kids-open').href = kids;
   $('preview-link').href = `${kids}?demo=60`;
+  renderQr(kids);
   $('edit-link').value = `${location.origin}/bewerk/${t.id}#${t.editToken}`;
   $('result').hidden = false;
   $('intro').textContent = 'Je kunt het tijdstip of de plek hieronder nog aanpassen.';
   submitBtn.textContent = 'Wijzigingen opslaan';
   deleteBtn.hidden = false;
+}
+
+async function renderQr(url) {
+  const canvas = $('kids-qr');
+  await QRCode.toCanvas(canvas, url, {
+    width: 200,
+    margin: 2,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#7a0019', light: '#ffffff' },
+  });
+  $('qr-download').href = canvas.toDataURL('image/png');
 }
 
 document.querySelectorAll('[data-copy]').forEach((btn) => {

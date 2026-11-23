@@ -127,6 +127,19 @@ input:focus { outline: 3px solid var(--gold); outline-offset: 1px; border-color:
 .link-row input { flex: 1; min-width: 0; font-size: 0.9rem; }
 .result a:not(.btn) { color: var(--red); font-weight: 600; }
 
+.qr-box {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: #fff;
+  border: 2px solid #d9c49a;
+  border-radius: 12px;
+}
+#kids-qr { width: 160px; height: 160px; flex-shrink: 0; image-rendering: pixelated; }
+.qr-text { margin: 0 0 0.6rem; font-size: 0.95rem; }
+
 .privacy {
   margin-top: 1.8rem;
   font-size: 0.82rem;
@@ -135,6 +148,7 @@ input:focus { outline: 3px solid var(--gold); outline-offset: 1px; border-color:
 }
 
 @media (max-width: 480px) {
+  .qr-box { flex-direction: column; text-align: center; }
   .when { flex-direction: column; gap: 0.6rem; }
   .link-row { flex-wrap: wrap; }
 }
