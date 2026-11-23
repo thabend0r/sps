@@ -9,7 +9,12 @@ let noise = null;
 
 function audio() {
   if (!ctx) {
-    ctx = new AudioContext();
+    // iOS: play like a video does, also when the silent switch is on
+    // (default "ambient" web audio is muted by the switch). Safari 16.4+.
+    if (navigator.audioSession) {
+      try { navigator.audioSession.type = 'playback'; } catch { /* not supported */ }
+    }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
     master = ctx.createGain();
     master.gain.value = 0.8;
     master.connect(ctx.destination);
@@ -18,24 +23,56 @@ function audio() {
     const data = noise.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
   return ctx;
 }
 
-const ready = () => enabled && ctx && ctx.state === 'running';
+/**
+ * Must be called from inside a tap/click: iOS only unlocks audio when a sound
+ * actually starts during the user gesture, so play one silent sample.
+ */
+function unlock() {
+  const c = audio();
+  const src = c.createBufferSource();
+  src.buffer = c.createBuffer(1, 1, c.sampleRate);
+  src.connect(c.destination);
+  src.start(0);
+}
+
+/** Run `play` once audio is running (resuming it first if iOS paused it). */
+function whenReady(play) {
+  if (!enabled || !ctx) return;
+  if (ctx.state === 'running') return play();
+  ctx.resume().then(() => { if (ctx.state === 'running') play(); }).catch(() => {});
+}
 
 export function isSoundOn() {
   return enabled;
 }
 
+/** Call from the click handler of the sound button. */
 export function setSound(on) {
   enabled = on;
   localStorage.setItem(STORAGE_KEY, on ? 'on' : 'off');
-  if (on) audio();
+  if (on) unlock();
 }
 
-// If sound was left "on" last time, unlock audio on the first tap/click anywhere.
-window.addEventListener('pointerdown', () => { if (enabled) audio(); }, { once: true });
+// If sound was left "on" last time, unlock on the first real tap/click/key.
+// (On touch screens pointerdown doesn't count as a gesture for audio; these do.)
+const UNLOCK_EVENTS = ['touchend', 'click', 'keydown'];
+function unlockOnGesture() {
+  if (!enabled) return;
+  unlock();
+  if (ctx.state === 'running') UNLOCK_EVENTS.forEach((e) => window.removeEventListener(e, unlockOnGesture));
+}
+UNLOCK_EVENTS.forEach((e) => window.addEventListener(e, unlockOnGesture));
+
+// iOS suspends/interrupts audio when the screen locks or the tab is hidden.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && enabled && ctx && ctx.state !== 'running') {
+    ctx.resume().catch(() => {});
+  }
+});
 
 // ---- building blocks ---------------------------------------------------------
 function noiseHit(t, { freq, q, vol, decay, type = 'bandpass' }) {
@@ -85,7 +122,9 @@ function tone(t, freq, vol, decay) {
 
 /** Ozosnel galloping (three-beat canter). volume 0..1 */
 export function hoofbeats(seconds = 2.5, volume = 0.5) {
-  if (!ready()) return;
+  whenReady(() => playHoofbeats(seconds, volume));
+}
+function playHoofbeats(seconds, volume) {
   const start = ctx.currentTime + 0.05;
   const cycle = 0.42;
   for (let c = 0; c * cycle < seconds; c++) {
@@ -102,7 +141,9 @@ export function hoofbeats(seconds = 2.5, volume = 0.5) {
 
 /** Three heavy knocks on the door, twice. */
 export function knock() {
-  if (!ready()) return;
+  whenReady(playKnock);
+}
+function playKnock() {
   const start = ctx.currentTime + 0.05;
   [0, 0.28, 0.56, 1.3, 1.58, 1.86].forEach((offset) => {
     const t = start + offset;
@@ -113,7 +154,9 @@ export function knock() {
 
 /** Ding-dong doorbell. */
 export function doorbell(delay = 0) {
-  if (!ready()) return;
+  whenReady(() => playDoorbell(delay));
+}
+function playDoorbell(delay) {
   const t = ctx.currentTime + 0.05 + delay;
   tone(t, 659.25, 0.35, 1.6);       // E5
   tone(t + 0.55, 523.25, 0.35, 2.2); // C5
