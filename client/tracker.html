@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>SPS · Waar is Sinterklaas?</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="banner">
+      <h1>Waar is Sinterklaas?</h1>
+      <p class="subtitle">Sinterklaas Positioning System</p>
+    </header>
+
+    <div id="map" aria-label="Kaart van Nederland met Sinterklaas"></div>
+
+
+    <section class="status-card" aria-live="polite">
+      <div class="eta">
+        <span class="eta-label">Sinterklaas is bij jou over</span>
+        <span id="eta-value" class="eta-value">…</span>
+      </div>
+      <p id="status-message" class="status-message">Sinterklaas zoekt zijn mijter…</p>
+      <p class="location"><span id="location-label">Nu in:</span> <strong id="current-city">…</strong></p>
+    </section>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

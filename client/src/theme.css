@@ -1,0 +1,57 @@
+:root {
+  --red: #c8102e;
+  --red-dark: #7a0019;
+  --gold: #e8b931;
+  --cream: #fff6e5;
+  --brown: #7a3b1e;
+  --font-body: 'Fredoka', system-ui, sans-serif;
+  --font-title: 'Berkshire Swash', Georgia, serif;
+
+  /* Map tuning knobs: tweak live in DevTools (Elements > :root) */
+  --nl-filter: sepia(0.4) saturate(1.1) brightness(0.94) contrast(0.95);
+  --world-filter: grayscale(0.3) sepia(0.4) brightness(0.98) contrast(0.88);
+  --world-opacity: 0.85;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--red-dark);
+  background: var(--red);
+}
+
+/* ---- banner ---- */
+.banner {
+  text-align: center;
+  padding: 0.6rem 1rem 0.5rem;
+  background: linear-gradient(180deg, var(--red) 0%, var(--red-dark) 100%);
+  border-bottom: 4px solid var(--gold);
+  z-index: 10;
+}
+.banner h1 {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 400;
+  font-size: clamp(1.8rem, 6vw, 3rem);
+  color: var(--gold);
+  text-shadow: 2px 2px 0 var(--red-dark);
+}
+.banner .subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--cream);
+  opacity: 0.85;
+}
+
+/* Faded neighbours + open sea under the Dutch map (see map-layers.js) */
+.nl-tiles {
+  filter: url(#pdok-water-cutout) var(--nl-filter);
+}
+.world-tiles {
+  filter: var(--world-filter);
+  opacity: var(--world-opacity);
+}

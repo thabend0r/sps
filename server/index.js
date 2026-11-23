@@ -2,6 +2,8 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
+import { api } from './api.js';
+import { trackers, closeDb } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(__dirname, '../dist');
@@ -12,18 +14,51 @@ app.disable('x-powered-by');
 // Liveness/readiness probe for Docker and Kubernetes.
 app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
 
-// API routes come here in phase 3 (/api/...).
+app.use('/api', api);
+
+// Page routes -> which HTML page to serve.
+//   /s/<id>         kids tracker
+//   /demo           kids tracker with URL-param config (testing)
+//   /bewerk/<id>    parents page in edit mode (secret token is in the #fragment)
+//   /               parents page
+function pageFor(urlPath) {
+  if (/^\/s\/[A-Za-z0-9]{10}\/?$/.test(urlPath) || urlPath === '/demo') return 'tracker.html';
+  if (/^\/bewerk\/[A-Za-z0-9]{10}\/?$/.test(urlPath) || urlPath === '/') return 'index.html';
+  return null;
+}
+
+const noIndex = (_req, res, next) => {
+  res.set('X-Robots-Tag', 'noindex, nofollow');
+  next();
+};
 
 if (config.isProduction) {
-  // In production the built frontend is served by this same process.
   app.use(express.static(distDir, { index: false, maxAge: '1h' }));
-  app.get('/{*path}', (_req, res) => res.sendFile(path.join(distDir, 'index.html')));
+  app.get('/{*path}', noIndex, (req, res) => {
+    const page = pageFor(req.path);
+    if (!page) return res.status(404).send('Niet gevonden');
+    res.sendFile(path.join(distDir, page));
+  });
 } else {
   // In development Vite runs inside this server: one process, one URL, live reload.
   const { createServer } = await import('vite');
-  const vite = await createServer({ server: { middlewareMode: true }, appType: 'spa' });
+  const vite = await createServer({ server: { middlewareMode: true }, appType: 'mpa' });
+  app.use(noIndex, (req, _res, next) => {
+    const page = pageFor(req.path);
+    if (page) req.url = `/${page}`;
+    next();
+  });
   app.use(vite.middlewares);
 }
+
+// Delete expired trackers now and every hour.
+const purge = () => {
+  const n = trackers.purgeExpired();
+  if (n) console.log(`Purged ${n} expired tracker(s)`);
+};
+purge();
+const purgeTimer = setInterval(purge, 60 * 60_000);
+purgeTimer.unref();
 
 const server = app.listen(config.port, config.host, () => {
   console.log(`SPS server listening on http://${config.host}:${config.port}`);
@@ -31,5 +66,8 @@ const server = app.listen(config.port, config.host, () => {
 
 // Graceful shutdown so Kubernetes can stop the pod cleanly.
 for (const signal of ['SIGTERM', 'SIGINT']) {
-  process.on(signal, () => server.close(() => process.exit(0)));
+  process.on(signal, () => server.close(() => {
+    closeDb();
+    process.exit(0);
+  }));
 }

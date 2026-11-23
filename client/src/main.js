@@ -3,20 +3,17 @@ import 'leaflet/dist/leaflet.css';
 import '@fontsource/fredoka/400.css';
 import '@fontsource/fredoka/600.css';
 import '@fontsource/berkshire-swash/400.css';
+import './theme.css';
 import './style.css';
 
 import { sintIcon, homeIcon } from './icons.js';
+import { addBaseLayers, NL_BOUNDS } from './map-layers.js';
 import { etaText, messageFor, locationLabels, waitingPlace } from './messages.js';
 import { buildRoute, stateAt } from './route.js';
 import { hashString, seededRandom } from './random.js';
-import { loadTrackerConfig } from './tracker-config.js';
-
-const cfg = loadTrackerConfig();
-const route = buildRoute(cfg);
+import { loadTrackerConfig, TrackerNotFound } from './tracker-config.js';
 
 // ---- map ------------------------------------------------------------------
-const NL_BOUNDS = L.latLngBounds([50.75, 3.3], [53.55, 7.25]);
-
 const map = L.map('map', {
   zoomControl: false,
   attributionControl: true,
@@ -27,29 +24,44 @@ const map = L.map('map', {
 map.fitBounds(NL_BOUNDS);
 L.control.zoom({ position: 'topright' }).addTo(map);
 
-// Bottom layer: OpenStreetMap for everything outside NL (neighbours + sea), faded via CSS.
-// 'strict-origin' sends only our domain as Referer (OSM requires one), never the secret link path.
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  className: 'world-tiles',
-  referrerPolicy: 'strict-origin',
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  maxZoom: 19,
-}).addTo(map);
+addBaseLayers(map);
 
-// Top layer: PDOK BRT Achtergrondkaart (Kadaster): free, no API key, only covers NL
-// (transparent outside, so OSM shows through). Styles: 'standaard', 'pastel', 'grijs', 'water'.
-const TILE_STYLE = 'pastel';
-L.tileLayer(`https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/${TILE_STYLE}/EPSG:3857/{z}/{x}/{y}.png`, {
-  className: 'nl-tiles',
-  attribution: 'Kaartgegevens &copy; <a href="https://www.kadaster.nl">Kadaster</a>',
-  maxZoom: 19,
-}).addTo(map);
+// ---- load config ------------------------------------------------------------
+let cfg;
+try {
+  cfg = await loadTrackerConfig();
+} catch (err) {
+  showError(err instanceof TrackerNotFound
+    ? 'Deze Sint-link werkt niet (meer). Vraag papa of mama om een nieuwe!'
+    : 'Oeps, de Sint-tracker kon niet laden. Probeer het straks nog eens.');
+  throw err;
+}
+const route = buildRoute(cfg);
+
+function showError(text) {
+  document.getElementById('eta-value').textContent = '🙁';
+  document.querySelector('.eta-label').textContent = '';
+  document.getElementById('status-message').textContent = text;
+  document.querySelector('.location').hidden = true;
+}
+
 
 const home = L.latLng(cfg.home.lat, cfg.home.lng);
 L.marker(home, { icon: homeIcon, zIndexOffset: 500 }).addTo(map);
 
 const sint = L.marker(home, { icon: sintIcon, zIndexOffset: 1000 });
 const trail = L.polyline([], { className: 'sint-trail' }).addTo(map);
+
+// While the map zooms, Leaflet scales the existing trail with a CSS transform.
+// Redrawing it at the same time scales it twice (trail drifts away from Sint),
+// so pause trail updates during zooms and redraw once the movement is done.
+let mapZooming = false;
+let trailPoints = [];
+map.on('zoomstart', () => { mapZooming = true; });
+map.on('moveend', () => {
+  mapZooming = false;
+  trail.setLatLngs(trailPoints);
+});
 
 // ---- follow mode: keep Sint and the house in view ---------------------------
 // Turns off as soon as the child drags/zooms; the button turns it back on.
@@ -143,7 +155,8 @@ function tick() {
   if (state.phase !== 'waiting') {
     sint.setLatLng([state.lat, state.lng]);
     const visited = state.stops.slice(0, state.stopIndex + 1).map((s) => [s.lat, s.lng]);
-    trail.setLatLngs([...visited, [state.lat, state.lng]]);
+    trailPoints = [...visited, [state.lat, state.lng]];
+    if (!mapZooming) trail.setLatLngs(trailPoints);
   }
   requestAnimationFrame(tick);
 }

@@ -9,10 +9,14 @@ export const ROUTE_SETTINGS = {
   windowMinutes: 180,      // Sint appears this long before delivery
   nearbyArriveMinutes: 14, // arrives in "jouw buurt" this long before delivery
   nearbyLeaveMinutes: 3,   // leaves "jouw buurt" for the house
-  maxCities: 9,            // max cities before reaching the neighbourhood
-  closeEnoughKm: 20,       // stop city-hopping once this close to home
+  minCities: 14,           // number of cities visited (random between min and max)
+  maxCities: 18,
+  minHopKm: 12,            // preferred distance between two cities
+  maxHopKm: 60,
+  wanderKm: 25,            // randomness: higher = more zigzag, lower = more direct
+  closeInCurve: 1.6,       // >1: stay far away longer and close in later in the evening
   excludeNearHomeKm: 4,    // don't use a city as stop if home is inside it
-};
+}
 
 export function distanceKm(a, b) {
   const R = 6371;
@@ -25,28 +29,36 @@ export function distanceKm(a, b) {
 
 function pickCities(home, rnd, s) {
   const pool = cities.filter((c) => distanceKm(c, home) > s.excludeNearHomeKm);
-  const maxD = Math.max(...pool.map((c) => distanceKm(c, home)));
-  const start = pick(rnd, pool.filter((c) => distanceKm(c, home) >= maxD * 0.6));
+  const toHome = (c) => distanceKm(c, home);
+  const maxD = Math.max(...pool.map(toHome));
+  const start = pick(rnd, pool.filter((c) => toHome(c) >= maxD * 0.6));
+  const count = s.minCities + Math.floor(rnd() * (s.maxCities - s.minCities + 1));
+  const d0 = toHome(start);
 
+  // Every step has a "target distance to home" that shrinks over the evening
+  // (slowly at first, faster at the end). Sint picks a city at a reasonable hop
+  // that is close to that target distance; the random part makes him zigzag.
   const path = [start];
   let cur = start;
-  while (path.length < s.maxCities) {
-    const dCur = distanceKm(cur, home);
-    if (dCur < s.closeEnoughKm) break;
+  for (let k = 1; k < count; k++) {
+    const progress = k / (count - 1);
+    const target = d0 * (1 - progress ** s.closeInCurve);
     const unused = pool.filter((c) => !path.includes(c));
-    // Prefer a hop of 10-70 km that brings Sint clearly closer to home.
     let cand = unused.filter((c) => {
       const hop = distanceKm(cur, c);
-      return distanceKm(c, home) < dCur * 0.85 && hop >= 10 && hop <= 70;
+      return hop >= s.minHopKm && hop <= s.maxHopKm;
     });
     if (cand.length === 0) {
-      cand = unused
-        .filter((c) => distanceKm(c, home) < dCur)
-        .sort((a, b) => distanceKm(cur, a) - distanceKm(cur, b))
-        .slice(0, 3);
+      cand = unused.sort((a, b) => distanceKm(cur, a) - distanceKm(cur, b)).slice(0, 5);
     }
     if (cand.length === 0) break;
-    cur = pick(rnd, cand);
+    let best = null;
+    let bestScore = Infinity;
+    for (const c of cand) {
+      const score = Math.abs(toHome(c) - target) + rnd() * s.wanderKm;
+      if (score < bestScore) { bestScore = score; best = c; }
+    }
+    cur = best;
     path.push(cur);
   }
   return path;
