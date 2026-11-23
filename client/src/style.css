@@ -130,3 +130,106 @@ body.arrived .eta-label { visibility: hidden; }
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
 }
 .follow-btn:hover { background: var(--red-dark); }
+
+/* ---- sound button ---- */
+.sound-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 3px solid var(--gold);
+  background: var(--cream);
+  color: var(--red-dark);
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+.sound-btn[aria-pressed='true'] { background: var(--gold); }
+
+/* ---- falling pepernoten + confetti ---- */
+.fx-layer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2000;
+}
+.fx-pepernoot, .fx-confetti {
+  position: absolute;
+  top: -40px;
+  animation-name: fall;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+.fx-pepernoot {
+  border-radius: 46% 54% 50% 50% / 52% 48% 52% 48%;
+  background: radial-gradient(circle at 35% 30%, #d9995a 0%, #a8652e 45%, #6b3817 100%);
+  box-shadow: inset -2px -2px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.fx-confetti {
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+}
+@keyframes fall {
+  from { transform: translate3d(0, 0, 0) rotate(0deg); }
+  to   { transform: translate3d(var(--drift), 110vh, 0) rotate(var(--spin)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sint-marker .sint-bubble, body.nearby .status-card, .star { animation: none; }
+}
+
+/* ---- evening look ---- */
+.banner { position: relative; overflow: hidden; transition: background 3s ease; }
+.banner h1, .banner .subtitle { position: relative; z-index: 1; }
+
+.night-sky {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 3s ease;
+  pointer-events: none;
+}
+.night-sky .star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fffbe6;
+  box-shadow: 0 0 4px #fffbe6;
+  animation: twinkle 3s ease-in-out infinite;
+}
+.night-sky .moon {
+  position: absolute;
+  top: 12px;
+  right: 6%;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  box-shadow: -9px 4px 0 0 #fbe7a1; /* crescent */
+  transform: rotate(-20deg);
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+body.evening .banner {
+  background: linear-gradient(180deg, #0d1640 0%, #2a1d5c 70%, var(--red-dark) 100%);
+}
+body.evening .night-sky { opacity: 1; }
+
+/* Dusky blue map in the evening (on top of the per-layer filters). */
+.leaflet-tile-pane { transition: filter 3s ease; }
+body.evening .leaflet-tile-pane {
+  filter: brightness(0.72) saturate(0.85) sepia(0.2) hue-rotate(185deg);
+}
+body.evening #map::after {
+  background: radial-gradient(ellipse at center,
+    transparent 50%,
+    rgba(20, 25, 70, 0.35) 80%,
+    rgba(10, 14, 45, 0.6) 100%);
+  box-shadow: inset 0 0 50px rgba(5, 8, 30, 0.6);
+}
+/* The house windows glow a bit in the evening. */
+body.evening .home-marker .home-pin svg {
+  filter: drop-shadow(0 0 8px rgba(255, 210, 90, 0.9)) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+}
