@@ -16,8 +16,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY server ./server
 COPY --from=build /app/dist ./dist
-RUN mkdir -p /data && chown node:node /data
-USER node
+RUN mkdir -p /data && chown 1000:1000 /data
+# Numeric user (= 'node') so Kubernetes can verify runAsNonRoot.
+USER 1000:1000
 EXPOSE 3000
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1

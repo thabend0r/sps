@@ -6,7 +6,7 @@ import L from 'leaflet';
 function ensureWaterFilter() {
   if (document.getElementById('pdok-water-cutout')) return;
   document.body.insertAdjacentHTML('beforeend', `
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <svg width="0" height="0" class="svg-defs" aria-hidden="true">
       <filter id="pdok-water-cutout" color-interpolation-filters="sRGB">
         <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  6 0 -6 1 0" />
       </filter>

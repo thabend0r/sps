@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
+import { config } from './config.js';
 import { trackers } from './db.js';
 
 const DAY = 24 * 60 * 60_000;
@@ -52,14 +54,31 @@ function authorized(req, row) {
 
 const ID_RE = /^[A-Za-z0-9]{10}$/;
 
+const limitMessage = { error: 'Even rustig aan! Probeer het later nog eens.' };
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: config.rateLimit.apiPer15Min,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: limitMessage,
+});
+const createLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  limit: config.rateLimit.createPerHour,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Je hebt al veel Sint-links gemaakt. Probeer het over een uurtje nog eens.' },
+});
+
 export const api = express.Router();
+api.use(apiLimiter);
 api.use(express.json({ limit: '2kb' }));
 api.use((_req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
 });
 
-api.post('/trackers', (req, res) => {
+api.post('/trackers', createLimiter, (req, res) => {
   const { value, error } = validate(req.body);
   if (error) return res.status(400).json({ error });
   const id = randomId();

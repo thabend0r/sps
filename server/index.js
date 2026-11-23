@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
@@ -10,6 +11,29 @@ const distDir = path.resolve(__dirname, '../dist');
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', config.trustProxy);
+
+// Security headers. The CSP only allows our own files plus the two map services.
+// (Dev mode skips the CSP: Vite's live reload needs inline scripts.)
+app.use(helmet({
+  contentSecurityPolicy: config.isProduction && {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https://service.pdok.nl', 'https://tile.openstreetmap.org'],
+      connectSrc: ["'self'", 'https://api.pdok.nl'],
+      fontSrc: ["'self'", 'data:'],
+      objectSrc: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  // Map tiles set their own referrer policy per image (see map-layers.js).
+  referrerPolicy: { policy: 'no-referrer' },
+}));
 
 // Liveness/readiness probe for Docker and Kubernetes.
 app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));

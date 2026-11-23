@@ -1,0 +1,10 @@
+Sinterklaas Positioning System is deployed.
+{{- if .Values.ingress.enabled }}
+
+Open: http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.host }}/
+{{- else }}
+
+No ingress enabled. To try it:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "sps.fullname" . }} 8080:{{ .Values.service.port }}
+  open http://localhost:8080/
+{{- end }}
