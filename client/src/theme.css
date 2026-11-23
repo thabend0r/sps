@@ -49,11 +49,10 @@ html, body {
 
 /* Faded neighbours + open sea under the Dutch map (see map-layers.js) */
 .nl-tiles {
-  filter: url(#pdok-water-cutout) var(--nl-filter);
+  filter: var(--nl-filter);
 }
 .world-tiles {
   filter: var(--world-filter);
   opacity: var(--world-opacity);
 }
 
-.svg-defs { position: absolute; }
