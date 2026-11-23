@@ -22,12 +22,18 @@ const map = L.map('map', {
   attributionControl: true,
   maxBounds: NL_BOUNDS.pad(0.15),
   maxBoundsViscosity: 0.8,
-  minZoom: 7,
+  minZoom: 6,
 });
 map.fitBounds(NL_BOUNDS);
 L.control.zoom({ position: 'topright' }).addTo(map);
 
 addBaseLayers(map);
+
+// Re-measure whenever the map element changes size (mobile address bar collapsing,
+// web fonts changing the banner height, rotating the phone). Leaflet only listens
+// to window resizes; without this, part of the map stays empty.
+new ResizeObserver(() => map.invalidateSize({ pan: false })).observe(map.getContainer());
+document.fonts?.ready.then(() => map.invalidateSize({ pan: false }));
 
 // ---- load config ------------------------------------------------------------
 let cfg;
@@ -122,7 +128,16 @@ for (const evt of ['mousedown', 'wheel', 'touchstart', 'keydown']) {
 function frameView(state, animate) {
   if (!following || !state) return;
   // Leave room at the bottom for the status card.
-  const opts = { paddingTopLeft: [50, 50], paddingBottomRight: [50, 230], maxZoom: 14, animate, duration: 1.5 };
+  // Keep clear of the status card at the bottom (its real height, so it works on phones too).
+  const card = document.querySelector('.status-card');
+  const side = window.innerWidth < 600 ? 30 : 50;
+  const opts = {
+    paddingTopLeft: [side, side + 20],
+    paddingBottomRight: [side, (card?.offsetHeight ?? 200) + 30],
+    maxZoom: 14,
+    animate,
+    duration: 1.5,
+  };
   if (state.phase === 'waiting') {
     map.flyToBounds(NL_BOUNDS, opts);
   } else if (state.phase === 'arrived') {
